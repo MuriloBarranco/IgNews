@@ -1,24 +1,21 @@
-import Head from "next/head"
-import styles from "./styles.module.scss"
-import Link from "next/link"
-import { getPrismicClient } from "../../services/prismic"
-import { GetStaticProps } from "next"
-import { RichText } from "prismic-dom"
-
-import Prismic from "@prismicio/client"
+import Head from "next/head";
+import { getPrismicClient } from "../../services/prismic";
+import { RichText } from "prismic-dom";
+import styles from "./styles.module.scss";
+import Link from "next/link";
 
 type Post = {
-  slug: string
-  title: string
-  excerpt: string
-  updatedAt: string
+  slug: string;
+  title: string;
+  excerpti: string;
+  updatedAt: string;
+};
+
+interface postsProps {
+  posts: Post[];
 }
 
-interface PostsProps {
-  posts: Post[]
-}
-
-export default function Posts({ posts }: PostsProps) {
+export default function Posts({ posts }: postsProps) {
   return (
     <>
       <Head>
@@ -29,47 +26,44 @@ export default function Posts({ posts }: PostsProps) {
         <div className={styles.posts}>
           {posts.map((post) => (
             <Link key={post.slug} href={`/posts/${post.slug}`}>
-              <time>{post.updatedAt}</time>
-              <strong>{post.title}</strong>
-              <p>{post.excerpt}</p>
+              <a>
+                <time>{post.updatedAt}</time>
+                <strong>{post.title}</strong>
+                <p>{post.excerpti}</p>
+              </a>
             </Link>
           ))}
+          
         </div>
       </main>
     </>
-  )
+  );
 }
 
-export const getStaticProps: GetStaticProps = async () => {
-  const prismic = getPrismicClient()
+export async function getServerSideProps() {
+  const prismic = getPrismicClient();
 
-  const response = await prismic.query(
-    [Prismic.predicates.at("document.type", "publication")],
-    {
-      fetch: ["publication.title", "publication.content"],
-      pageSize: 100,
-    }
-  )
+  const responsePosts = await prismic.getByType("publication", {
+    pageSize: 100,
+  });
 
-  const posts = response.results.map((post) => {
+  const posts = responsePosts.results.map((post) => {
     return {
       slug: post.uid,
       title: RichText.asText(post.data.title),
-      excerpt:
-        post.data.content.find((content) => content.type === "paragraph")
-          ?.text ?? "",
+      excerpti: post.data.content.find((content) => content.type == "paragraph")?.text ?? "",
       updatedAt: new Date(post.last_publication_date).toLocaleDateString(
-        "pt-BR",
+        "pt-br",
         {
           day: "2-digit",
           month: "long",
           year: "numeric",
         }
       ),
-    }
-  })
+    };
+  });
 
   return {
     props: { posts },
-  }
+  };
 }
